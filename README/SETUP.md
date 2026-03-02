@@ -1,46 +1,38 @@
-CRM AI — Phase 0 Setup Documentation
-Overview
+# CRM AI
 
-Phase 0 established a production-ready full-stack foundation for a multi-tenant CRM that will ingest analytics from AI phone bots and chatbots. This phase focused entirely on infrastructure, tooling, and environment configuration.
+A multi-tenant SaaS CRM designed to aggregate and analyze events from AI phone bots and chatbots.
 
-Core Stack
-1. Next.js (App Router, TypeScript)
+This project is being built as a production-grade full-stack TypeScript application with a strong focus on:
 
-Created with:
+- Clean architecture
+- Event-driven ingestion
+- Multi-tenant data isolation
+- Observability
+- Internship-level engineering standards
 
-npx create-next-app@latest crm --typescript --tailwind --eslint --app
+---
 
-Purpose
+# 🚀 Tech Stack
 
-Full-stack framework (frontend + API routes)
+## Core Framework
+- **Next.js 16 (App Router)**
+- **TypeScript**
+- **Turbopack**
 
-Modern App Router architecture
+Used for:
+- Full-stack development (frontend + API routes)
+- Modern routing architecture
+- Type-safe backend logic
 
-Type-safe development
+---
 
-Single-repo SaaS structure
+## Database Layer
+- **PostgreSQL**
+- **Prisma ORM**
 
-Configuration:
+Prisma configuration:
 
-TypeScript enabled
-
-Tailwind enabled
-
-App Router enabled
-
-React Compiler disabled (stability over experimental features)
-
-@/* import alias configured
-
-2. Prisma ORM + PostgreSQL
-
-Installed:
-
-npm install prisma @prisma/client
-npx prisma init
-
-Final schema.prisma configuration:
-
+```prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -49,156 +41,216 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+```
 
-Created a Prisma singleton:
+A Prisma singleton is used to prevent multiple client instances during development:
 
-src/lib/prisma.ts
+```ts
+// src/lib/prisma.ts
 
-Purpose
+import { PrismaClient } from '@prisma/client';
 
-Database access layer
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-Strongly typed queries
+export const prisma =
+  globalForPrisma.prisma ?? new PrismaClient();
 
-Foundation for multi-tenant architecture
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+```
 
-Database not fully provisioned yet (local Postgres setup pending).
+---
 
-3. Authentication (Auth.js)
+## Authentication
+- **Auth.js (NextAuth)**
+- **@auth/prisma-adapter**
 
-Installed:
+Planned for:
+- Session management
+- Role-based access control (RBAC)
+- Workspace-level multi-tenancy
 
-npm install next-auth
-npm install @auth/prisma-adapter
+Authentication providers will be configured in Phase 1.
 
-Purpose
+---
 
-Session management
+## UI System
+- **Tailwind CSS**
+- **shadcn/ui**
 
-Multi-tenant RBAC (Workspace-based access)
+Components installed:
+- Button
+- Input
+- Card
+- Dialog
+- Dropdown
+- Table
+- Badge
 
-Protected routes
+Used to build a clean SaaS-style dashboard interface.
 
-Auth providers not yet configured.
+---
 
-4. Validation & Forms
+## Validation & Forms
+- **Zod**
+- **React Hook Form**
+- **@hookform/resolvers**
 
-Installed:
+Used for:
+- Type-safe API validation
+- Webhook payload validation
+- Form handling
 
-npm install zod react-hook-form @hookform/resolvers
+---
 
-Purpose
+## Analytics & Utilities
+- **Recharts** (dashboard charts)
+- **Day.js** (date utilities)
+- **UUID** (event IDs)
 
-API validation
+---
 
-Webhook payload validation
+## Observability
+- **Sentry (SaaS)**
 
-Type-safe form handling
+Configured under:
+- Organization: `NeurOps`
+- Project: `crm-ai`
 
-5. UI System
+Used for:
+- Runtime error tracking
+- API route monitoring
+- Production debugging
 
-Tailwind CSS
+---
 
-shadcn/ui components installed (Button, Card, Input, Dialog, Table, etc.)
+# 🛠 Environment Setup
 
-Purpose
+## 1. Install Dependencies
 
-Clean SaaS-style dashboard
+```bash
+npm install
+```
 
-Reusable UI primitives
+## 2. Node Version
 
-Accessible components
+Requires:
 
-6. Analytics & Charts
+```
+Node >= 20.19
+```
 
-Installed:
+Recommended:
 
-npm install recharts dayjs uuid
-
-Purpose
-
-CRM dashboards
-
-Time-based analytics
-
-Event metrics visualization
-
-7. Error Monitoring (Sentry)
-
-Installed and configured via:
-
-npm install @sentry/nextjs
-npx @sentry/wizard -i nextjs
-
-Configuration:
-
-Sentry SaaS (not self-hosted)
-
-Project created under NeurOps organization
-
-Browser events not routed through Next.js server
-
-Purpose
-
-Runtime error tracking
-
-API monitoring
-
-Production observability
-
-8. Node Version Upgrade
-
-Upgraded to:
-
+```
 Node v22.12.0
+```
 
-Reason:
+If using NVM:
 
-Prisma requires Node ≥ 20.19
+```bash
+nvm install 22.12.0
+nvm use 22.12.0
+```
 
-Ensures compatibility with modern ecosystem
+---
 
-Current Project Structure
-src/
- ├── app/
- ├── lib/
- │   └── prisma.ts
- ├── server/
- ├── types/
-prisma/
- └── schema.prisma
-What Is Fully Set Up
+## 3. Environment Variables
 
-Next.js full-stack app
+Create a `.env` file:
 
-TypeScript environment
+```
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/crm"
+```
 
-Prisma ORM configured
+Database provisioning (Docker or local Postgres) is required.
 
-Prisma client generated
+---
 
-Tailwind + shadcn UI
+## 4. Generate Prisma Client
 
-Sentry integrated
+```bash
+npx prisma generate
+```
 
-Modern Node version
+---
 
-App runs successfully at:
+## 5. Run Development Server
 
+```bash
+npm run dev
+```
+
+App will run at:
+
+```
 http://localhost:3000
-What Still Needs Setup (Next Phase)
+```
 
-Local PostgreSQL instance
+---
 
-Prisma models (Workspace, User, RBAC, Contact, Event)
+# 📂 Project Structure
 
-Authentication providers
+```
+src/
+ ├── app/           # App Router pages & API routes
+ ├── lib/           # Shared utilities (Prisma client)
+ ├── server/        # Business logic layer (planned)
+ ├── types/         # Shared TypeScript types
+prisma/
+ └── schema.prisma  # Database schema
+```
 
-Webhook ingestion endpoint
+---
 
-Dashboard analytics queries
+# ✅ Phase 0 — Completed
 
-Status
+- Next.js full-stack setup
+- TypeScript strict configuration
+- Prisma ORM configured
+- Prisma client generated
+- Tailwind + shadcn UI system
+- Sentry integration
+- Modern Node environment
+- Clean project structure
 
-Environment and infrastructure complete.
-Ready to begin Phase 1: domain modeling and backend architecture.
+---
+
+# 🔜 Phase 1 — In Progress
+
+Planned models:
+- Workspace
+- User
+- WorkspaceMember (RBAC)
+- Contact
+- Conversation
+- Event (idempotent ingestion)
+
+Upcoming features:
+- Webhook ingestion endpoint
+- Event normalization layer
+- Multi-tenant data isolation
+- Dashboard analytics queries
+
+---
+
+# 🧠 Architectural Direction
+
+This CRM is being designed as:
+
+- A multi-tenant SaaS
+- Event-driven analytics platform
+- AI chatbot + phone call ingestion system
+- Production-grade full-stack TypeScript application
+
+The stack and architecture are intentionally chosen to reflect real-world startup engineering practices.
+
+---
+
+# 📌 Status
+
+Infrastructure and tooling complete.  
+Ready for domain modeling and backend architecture implementation.
