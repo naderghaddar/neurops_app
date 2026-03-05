@@ -1,17 +1,28 @@
+import { headers } from "next/headers";
+
 type WorkspaceDTO = {
   id: string;
   name: string;
   workspaceKey: string;
   webhookKey: string;
   createdAt: string;
+  voiceflow?: Array<{
+    id: string;
+    name: string;
+    projectId: string;
+    channel: string;
+  }>;
 };
 
-type EventRow = {
-  id: string;
-  type: string;
-  source: string | null;
-  receivedAt: string;
-};
+async function safeJson<T>(res: Response): Promise<T | null> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) return null;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
 
 export default async function DashboardPage() {
   const key = process.env.DEMO_WORKSPACE_KEY;
@@ -26,24 +37,22 @@ export default async function DashboardPage() {
     );
   }
 
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://192.168.2.18:3000";
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "localhost:3000";
+  const proto = hdrs.get("x-forwarded-proto") ?? "http";
+  const base = `${proto}://${host}`;
 
-  const [wsRes, evRes] = await Promise.all([
-    fetch(`${base}/api/workspace/by-key`, {
-      headers: { "x-workspace-key": key },
+  const wsRes = await fetch(
+    `${base}/api/workspace/${encodeURIComponent(key)}/voiceflow/connections/by-key?workspaceKey=${encodeURIComponent(
+      key
+    )}`,
+    {
       cache: "no-store",
-    }),
-    fetch(`${base}/api/events/recent`, {
-      headers: { "x-workspace-key": key },
-      cache: "no-store",
-    }),
-  ]);
+    }
+  );
 
-  const wsJson: { workspace?: WorkspaceDTO; error?: string } = await wsRes.json();
-  const evJson: { events?: EventRow[]; error?: string } = await evRes.json();
-
-  const workspace = wsJson.workspace;
-  const events: EventRow[] = evJson.events ?? [];
+  const wsJson = await safeJson<{ workspace?: WorkspaceDTO; error?: string }>(wsRes);
+  const workspace = wsJson?.workspace;
 
   return (
     <main style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -54,7 +63,7 @@ export default async function DashboardPage() {
 
         {!workspace ? (
           <div style={{ color: "crimson" }}>
-            Failed to load workspace: {wsJson.error ?? `HTTP ${wsRes.status}`}
+            Failed to load workspace: {wsJson?.error ?? `HTTP ${wsRes.status}`}
           </div>
         ) : (
           <>
@@ -66,33 +75,17 @@ export default async function DashboardPage() {
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2>Recent Events</h2>
-
-        {evRes.ok ? (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>Type</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>Source</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>Received</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>{e.type}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>{e.source ?? "-"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #eee" }}>
-                    {new Date(e.receivedAt).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <h2>Transcript Connections</h2>
+        {!workspace?.voiceflow || workspace.voiceflow.length === 0 ? (
+          <div style={{ color: "#666" }}>No active Voiceflow connections.</div>
         ) : (
-          <div style={{ color: "crimson" }}>
-            Failed to load events: {evJson.error ?? `HTTP ${evRes.status}`}
-          </div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {workspace.voiceflow.map((c) => (
+              <li key={c.id} style={{ marginBottom: 8 }}>
+                <b>{c.name}</b> ({c.channel}) - {c.projectId}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </main>
