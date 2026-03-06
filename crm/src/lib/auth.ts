@@ -1,10 +1,12 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { AUTH_SECRET } from "@/lib/auth-secret";
 
-export function getCurrentUserId(req: NextRequest): string | null {
-  // Option A: pass from client as a header while you develop
-  const headerId = req.headers.get("x-user-id");
-  if (headerId) return headerId;
+export async function getCurrentUserId(req: NextRequest): Promise<string | null> {
+  const token = await getToken({ req, secret: AUTH_SECRET });
+  if (!token?.sub) {
+    return null;
+  }
 
-  // Option B: fallback to .env
-  return process.env.DEMO_USER_ID ?? null;
+  return token.sub;
 }

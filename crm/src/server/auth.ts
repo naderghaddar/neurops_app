@@ -1,15 +1,11 @@
-import { cookies } from "next/headers";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
-/**
- * Replace this with your real auth.
- * For now it reads a cookie like "userId".
- */
 export async function requireAuthUserId(): Promise<string> {
-  const c = await cookies();
-  const userId = c.get("userId")?.value;
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
 
   if (!userId) {
-    // NextResponse.json is in route file; here just throw
     throw new Error("UNAUTHORIZED");
   }
 

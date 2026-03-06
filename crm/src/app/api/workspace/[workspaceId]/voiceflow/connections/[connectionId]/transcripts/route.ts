@@ -16,7 +16,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ workspaceId: string; connectionId: string }> }
 ) {
-  const userId = getCurrentUserId(req);
+  const userId = await getCurrentUserId(req);
 
   if (!userId) {
     return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
